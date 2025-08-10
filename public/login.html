@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Reels Auto-Poster — Login</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+</head>
+<body class="bg-light">
+  <div class="container" style="max-width:420px; margin-top:80px;">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h4 class="mb-3">Login to Reels Auto-Poster</h4>
+
+        <div class="mb-3">
+          <label class="form-label">Access Password</label>
+          <input id="password" type="password" class="form-control" placeholder="Enter password">
+        </div>
+
+        <div class="d-flex gap-2">
+          <button id="btnLogin" class="btn btn-primary">Login</button>
+          <button id="btnSend" class="btn btn-outline-secondary">Send password to email</button>
+        </div>
+
+        <div id="msg" class="mt-3"></div>
+
+        <hr />
+        <div class="text-muted small">
+          Test password: <strong>TestAccess123</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const msg = document.getElementById('msg');
+document.getElementById('btnLogin').addEventListener('click', async () => {
+  const pwd = document.getElementById('password').value;
+  msg.innerHTML = '';
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pwd })
+    });
+    const data = await res.json();
+    if (!res.ok) return msg.innerHTML = `<div class="alert alert-danger">${data.error || 'Login failed'}</div>`;
+    localStorage.setItem('ra_jwt', data.token);
+    msg.innerHTML = `<div class="alert alert-success">Login successful — redirecting...</div>`;
+    setTimeout(()=>window.location.href='/dashboard.html', 700);
+  } catch (err) {
+    msg.innerHTML = `<div class="alert alert-danger">Connection error</div>`;
+  }
+});
+
+document.getElementById('btnSend').addEventListener('click', async () => {
+  const email = prompt('Enter buyer email to send password to:');
+  if (!email) return;
+  try {
+    const res = await fetch('/api/send-password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if (res.ok) alert(data.message || 'Email sent');
+    else alert(data.error || 'Failed');
+  } catch (err) {
+    alert('Email error');
+  }
+});
+</script>
+</body>
+</html>
