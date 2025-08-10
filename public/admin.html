@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Admin</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/></head>
+<body class="bg-light p-3">
+  <div class="container" style="max-width:900px;">
+    <h3>Admin — Passwords</h3>
+    <div class="card p-3 mb-3">
+      <input id="adminKey" class="form-control mb-2" placeholder="Admin key (from env)" />
+      <div class="d-flex gap-2">
+        <input id="newPassword" class="form-control" placeholder="New password"/>
+        <input id="newLabel" class="form-control" placeholder="Label (optional)"/>
+        <button id="btnAdd" class="btn btn-success">Add</button>
+      </div>
+    </div>
+    <div id="listArea"></div>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+const adminKeyInput = document.getElementById('adminKey');
+const btnAdd = document.getElementById('btnAdd');
+const newPassword = document.getElementById('newPassword');
+const newLabel = document.getElementById('newLabel');
+const listArea = document.getElementById('listArea');
+
+async function fetchList(){
+  const key = adminKeyInput.value.trim();
+  if (!key) return listArea.innerHTML = '<div class="alert alert-info">Enter admin key to list passwords</div>';
+  try {
+    const res = await axios.get('/admin/passwords', { headers: { 'x-admin-key': key } });
+    const rows = res.data.passwords;
+    if (!rows.length) return listArea.innerHTML = '<div class="alert alert-secondary">No passwords</div>';
+    listArea.innerHTML = '<table class="table"><thead><tr><th>ID</th><th>Label</th><th>Created</th><th>Action</th></tr></thead><tbody>' +
+      rows.map(r => `<tr><td>${r.id}</td><td>${r.label||''}</td><td>${new Date(r.created_at).toLocaleString()}</td><td><button data-id="${r.id}" class="btn btn-sm btn-danger btn-remove">Delete</button></td></tr>`).join('') +
+      '</tbody></table>';
+    document.querySelectorAll('.btn-remove').forEach(b => b.addEventListener('click', removeRow));
+  } catch (err) {
+    listArea.innerHTML = `<div class="alert alert-danger">${err.response?.data?.error || 'Failed'}</div>`;
+  }
+}
+
+async function removeRow(e){
+  const id = e.currentTarget.dataset.id;
+  const key = adminKeyInput.value.trim();
+  if (!confirm('Delete password id ' + id + '?')) return;
+  await axios.post('/admin/remove-password', { id }, { headers: { 'x-admin-key': key }});
+  fetchList();
+}
+
+btnAdd.addEventListener('click', async () => {
+  const key = adminKeyInput.value.trim();
+  const pwd = newPassword.value.trim();
+  const label = newLabel.value.trim();
+  if (!key || !pwd) return alert('admin key + password required');
+  await axios.post('/admin/add-password', { password: pwd, label }, { headers: { 'x-admin-key': key }});
+  newPassword.value = ''; newLabel.value = '';
+  fetchList();
+});
+
+adminKeyInput.addEventListener('input', fetchList);
+</script>
+</body>
+</html>
